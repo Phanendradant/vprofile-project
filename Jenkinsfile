@@ -1,3 +1,8 @@
+def COLOR_MAP = [
+    'SUCCESS': 'good',
+    'FAILURE': 'danger',
+]
+
 pipeline {
     agent any
     tools {
@@ -11,7 +16,7 @@ pipeline {
         NEXUS_PASS = 'admin123'
         RELEASE_REPO = 'vprofile-release'
         CENTRAL_REPO = 'vpro-maven-central'
-        NEXUS_IP = '34.30.224.205' //nexus server private
+        NEXUS_IP = '34.30.224.205'
         NEXUS_PORT = '8081'
         NEXUS_GRP_REPO = 'vpro-maven-group'
         NEXUS_LOGIN = 'nexuslogin'
@@ -30,17 +35,21 @@ pipeline {
                     archiveArtifacts artifacts: '**/*.war'
                 }
             }
+            
         }
+
         stage('Test') {
             steps {
                 sh 'mvn -s settings.xml test'
-            }        
+            }
         }
+
         stage('Checkstyle Analysis') {
-            steps{
+            steps {
                 sh 'mvn -s settings.xml checkstyle:checkstyle'
             }
         }
+
         stage ('Sonar Analysis') {
             environment {
                 scannerHome = tool "${SONARSCANNER}" 
@@ -58,12 +67,15 @@ pipeline {
                 }
             }
         }
-        stage("Quality Gate") {
+
+        stage ("Quality Gate") {
             steps {
                 timeout(time:1, unit: 'HOURS') {
                     waitForQualityGate abortPipeline: true
                 }
             }
+        }
+
         stage ("Upload Artifact") {
             steps {
                 nexusArtifactUploader(
@@ -79,8 +91,17 @@ pipeline {
                      classifier: '',
                      file: 'target/vprofile-v2.war',
                      type: 'war']
-                    }
-                }
+                  ]
+                )
             }
         }
-
+    }
+    post {
+        always{
+            echo 'Slack Notifications'
+            slackSend channel: '#cicd',
+                color: COLOR_MAP[currentBuild.currentResult],
+                message: "*${currentBuild.currentResult}:* Job ${env.JOB_NAME} build ${env.BUILD_NUMBER} \n More info at: ${env.BUILD_URL}"
+        }
+    }
+}
