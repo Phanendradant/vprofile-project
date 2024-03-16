@@ -64,7 +64,6 @@ pipeline {
                     waitForQualityGate abortPipeline: true
                 }
             }
-        }
         stage ("Upload Artifact") {
             steps {
                 nexusArtifactUploader(
@@ -80,8 +79,8 @@ pipeline {
                      classifier: '',
                      file: 'target/vprofile-v2.war',
                      type: 'war']
+                    }
                 }
             }
         }
     }
-}
